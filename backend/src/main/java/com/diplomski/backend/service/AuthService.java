@@ -72,6 +72,37 @@ public class AuthService {
         return generateAuthResponse(user, ipAddress);
     }
 
+    public AuthResponse unsafeRegister(RegisterRequest request, String ipAddress) {
+        AuthResponse response = register(request, ipAddress);
+        userRepository.findByUsername(request.getUsername())
+                .ifPresent(user -> log(user.getId(), "UNSAFE_REGISTER", ipAddress,
+                        "Namerno ranjivi rezim: refresh token vracen u response body-ju"));
+        return response;
+    }
+
+    public AuthResponse unsafeLogin(LoginRequest request, String ipAddress) {
+        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new RuntimeException("Korisnik nije pronadjen"));
+
+        log(user.getId(), "UNSAFE_LOGIN", ipAddress, "Namerno ranjivi rezim: tokeni se cuvaju na klijentu");
+
+        return generateAuthResponse(user, ipAddress);
+    }
+
+    public AuthResponse protectedRegister(RegisterRequest request, String ipAddress) {
+        AuthResponse response = register(request, ipAddress);
+        userRepository.findByUsername(request.getUsername())
+                .ifPresent(user -> log(user.getId(), "PROTECTED_REGISTER", ipAddress,
+                        "Protected rezim: refresh token se postavlja u HttpOnly cookie"));
+        return response;
+    }
+
+    public AuthResponse protectedLogin(LoginRequest request, String ipAddress) {
+        return login(request, ipAddress);
+    }
+
 
     @Transactional
     public AuthResponse refresh(RefreshTokenRequest request, String ipAddress) {
@@ -106,12 +137,77 @@ public class AuthService {
     }
 
     @Transactional
+    public AuthResponse unsafeRefresh(RefreshTokenRequest request, String ipAddress) {
+        String tokenValue = request.getRefreshToken();
+
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(tokenValue)
+                .orElseThrow(() -> new RuntimeException("Refresh token nije pronadjen"));
+
+        if (refreshToken.getStatus() != TokenStatus.ACTIVE) {
+            throw new RuntimeException("Refresh token nije aktivan");
+        }
+
+        if (refreshToken.isExpired()) {
+            refreshToken.setStatus(TokenStatus.REVOKED);
+            refreshTokenRepository.save(refreshToken);
+            throw new RuntimeException("Refresh token je istekao");
+        }
+
+        // Namerno ranjivo ponasanje za eksperimentalni unsafe rezim:
+        // refresh token se ne rotira i moze ponovo da se koristi dok ne istekne ili ne bude opozvan.
+        User user = refreshToken.getUser();
+        log(user.getId(), "UNSAFE_REFRESH", ipAddress, "Refresh bez rotacije u unsafe rezimu");
+
+        return AuthResponse.builder()
+                .accessToken(jwtUtils.generateAccessToken(user.getUsername()))
+                .refreshToken(tokenValue)
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .role(user.getRole().name())
+                .tokenType("Bearer")
+                .build();
+    }
+
+    @Transactional
+    public AuthResponse protectedRefresh(String refreshTokenValue, String ipAddress) {
+        if (refreshTokenValue == null || refreshTokenValue.isBlank()) {
+            throw new RuntimeException("Refresh cookie nedostaje");
+        }
+
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken(refreshTokenValue);
+        return refresh(request, ipAddress);
+    }
+
+    @Transactional
     public void logout(RefreshTokenRequest request, String ipAddress) {
 
         refreshTokenRepository.findByToken(request.getRefreshToken())
                 .ifPresent(token -> {
                     log(token.getUser().getId(), "LOGOUT", ipAddress, "Korisnik se odjavio");
                     refreshTokenRepository.revokeAllUserTokens(token.getUser().getId());
+                });
+    }
+
+    @Transactional
+    public void unsafeLogout(RefreshTokenRequest request, String ipAddress) {
+        refreshTokenRepository.findByToken(request.getRefreshToken())
+                .ifPresent(token -> {
+                    log(token.getUser().getId(), "UNSAFE_LOGOUT", ipAddress, "Opozvan je samo prosledjeni unsafe refresh token");
+                    refreshTokenRepository.revokeToken(token.getToken());
+                });
+    }
+
+    @Transactional
+    public void protectedLogout(String refreshTokenValue, String ipAddress) {
+        if (refreshTokenValue == null || refreshTokenValue.isBlank()) {
+            return;
+        }
+
+        refreshTokenRepository.findByToken(refreshTokenValue)
+                .ifPresent(token -> {
+                    log(token.getUser().getId(), "PROTECTED_LOGOUT", ipAddress, "Opozvan je refresh token iz HttpOnly cookie-ja");
+                    refreshTokenRepository.revokeToken(token.getToken());
                 });
     }
 
