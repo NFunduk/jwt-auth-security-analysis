@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 
 function LoginPage() {
   const [username, setUsername] = useState('');
@@ -8,7 +8,7 @@ function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login } = useAuth();
+  const { authMode, changeAuthMode, login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -19,7 +19,7 @@ function LoginPage() {
     try {
       await login(username, password);
       navigate('/dashboard');
-    } catch (err) {
+    } catch {
       setError('Pogrešan username ili lozinka.');
     } finally {
       setLoading(false);
@@ -32,6 +32,35 @@ function LoginPage() {
         <h2 style={styles.title}>Prijava</h2>
 
         {error && <div style={styles.error}>{error}</div>}
+
+        <div style={styles.modeBox}>
+          <button
+            type="button"
+            style={{
+              ...styles.modeButton,
+              ...(authMode === 'protected' ? styles.modeButtonActive : {}),
+            }}
+            onClick={() => changeAuthMode('protected')}
+          >
+            Protected mode
+          </button>
+          <button
+            type="button"
+            style={{
+              ...styles.modeButton,
+              ...(authMode === 'unsafe' ? styles.modeButtonUnsafe : {}),
+            }}
+            onClick={() => changeAuthMode('unsafe')}
+          >
+            Unsafe mode
+          </button>
+        </div>
+
+        <p style={styles.modeNote}>
+          {authMode === 'unsafe'
+            ? 'Tokeni su u localStorage-u i dostupni JavaScript-u. Ovo je namerno ranjiv eksperimentalni rezim.'
+            : 'Access token je u memoriji, refresh token je HttpOnly cookie, a refresh koristi rotaciju.'}
+        </p>
 
         <form onSubmit={handleSubmit}>
           <div style={styles.field}>
@@ -94,6 +123,40 @@ const styles = {
     color: '#1a1a2e',
   },
   field: {
+    marginBottom: '16px',
+  },
+  modeBox: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '8px',
+    marginBottom: '10px',
+  },
+  modeButton: {
+    padding: '10px',
+    borderRadius: '6px',
+    border: '1px solid #ddd',
+    backgroundColor: '#f8f9fa',
+    color: '#333',
+    cursor: 'pointer',
+    fontWeight: '600',
+  },
+  modeButtonActive: {
+    backgroundColor: '#2d6a4f',
+    borderColor: '#2d6a4f',
+    color: 'white',
+  },
+  modeButtonUnsafe: {
+    backgroundColor: '#e63946',
+    borderColor: '#e63946',
+    color: 'white',
+  },
+  modeNote: {
+    fontSize: '13px',
+    lineHeight: '1.4',
+    color: '#555',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '6px',
+    padding: '10px',
     marginBottom: '16px',
   },
   label: {

@@ -1,49 +1,58 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axiosConfig';
+import {
+  getAccessToken,
+  getDisplayToken,
+  getUnsafeAccessToken,
+  getUnsafeRefreshToken,
+} from '../api/tokenStore';
+import { useAuth } from '../context/useAuth';
 
 function DashboardPage() {
-  const { user, logout } = useAuth();
+  const { authMode, user, logout } = useAuth();
   const navigate = useNavigate();
   const [message, setMessage] = useState('');
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchHello();
-    fetchProfile();
+    const fetchDashboardData = async () => {
+      try {
+        const helloResponse = await api.get('/api/protected/hello');
+        setMessage(helloResponse.data.message);
+
+        const profileResponse = await api.get('/api/protected/profile');
+        setProfile(profileResponse.data);
+      } catch {
+        setError('Greska pri ucitavanju dashboard podataka.');
+      }
+    };
+
+    fetchDashboardData();
   }, []);
-
-  const fetchHello = async () => {
-    try {
-      const response = await api.get('/api/protected/hello');
-      setMessage(response.data.message);
-    } catch (err) {
-      setError('Greška pri učitavanju poruke.');
-    }
-  };
-
-  const fetchProfile = async () => {
-    try {
-      const response = await api.get('/api/protected/profile');
-      setProfile(response.data);
-    } catch (err) {
-      setError('Greška pri učitavanju profila.');
-    }
-  };
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
+  const isUnsafe = authMode === 'unsafe';
+
   return (
     <div style={styles.container}>
       <div style={styles.navbar}>
         <h1 style={styles.navTitle}>JWT Auth Demo</h1>
         <div style={styles.navRight}>
-          <span style={styles.navUser}>👤 {user?.username}</span>
+          <span
+            style={{
+              ...styles.modeBadge,
+              backgroundColor: isUnsafe ? '#e63946' : '#2d6a4f',
+            }}
+          >
+            {isUnsafe ? 'UNSAFE MODE' : 'PROTECTED MODE'}
+          </span>
+          <span style={styles.navUser}>{user?.username}</span>
           <button style={styles.logoutBtn} onClick={handleLogout}>
             Odjavi se
           </button>
@@ -51,19 +60,26 @@ function DashboardPage() {
       </div>
 
       <div style={styles.card}>
-        <h2 style={styles.cardTitle}>🧪 Demonstracije napada</h2>
+        <h2 style={styles.cardTitle}>Demonstracije napada</h2>
         <button
-          style={{...styles.logoutBtn, backgroundColor: '#e63946', marginRight: '12px'}}
+          style={{ ...styles.logoutBtn, backgroundColor: '#e63946', marginRight: '12px' }}
           onClick={() => navigate('/xss-demo')}
         >
-          💉 XSS Demo
+          XSS Demo
         </button>
 
         <button
-          style={{...styles.logoutBtn, backgroundColor: '#f4a261'}}
+          style={{ ...styles.logoutBtn, backgroundColor: '#f4a261', marginRight: '12px' }}
           onClick={() => navigate('/csrf-demo')}
         >
-          🎭 CSRF Demo
+          CSRF Demo
+        </button>
+
+        <button
+          style={{ ...styles.logoutBtn, backgroundColor: '#4361ee' }}
+          onClick={() => navigate('/rotation-demo')}
+        >
+          Rotation Demo
         </button>
       </div>
 
@@ -71,13 +87,13 @@ function DashboardPage() {
         {error && <div style={styles.error}>{error}</div>}
 
         <div style={styles.card}>
-          <h2 style={styles.cardTitle}>✅ Zaštićen endpoint</h2>
-          <p style={styles.message}>{message || 'Učitavanje...'}</p>
+          <h2 style={styles.cardTitle}>Zasticen endpoint</h2>
+          <p style={styles.message}>{message || 'Ucitavanje...'}</p>
         </div>
 
         {profile && (
           <div style={styles.card}>
-            <h2 style={styles.cardTitle}>👤 Profil</h2>
+            <h2 style={styles.cardTitle}>Profil</h2>
             <div style={styles.profileItem}>
               <span style={styles.profileLabel}>Username:</span>
               <span>{profile.username}</span>
@@ -88,20 +104,34 @@ function DashboardPage() {
             </div>
             <div style={styles.profileItem}>
               <span style={styles.profileLabel}>Nalog aktivan:</span>
-              <span>{profile.accountActive ? '✅ Da' : '❌ Ne'}</span>
+              <span>{profile.accountActive ? 'Da' : 'Ne'}</span>
             </div>
           </div>
         )}
 
-        <div style={styles.card}>
-          <h2 style={styles.cardTitle}>🔑 Tokeni u localStorage</h2>
-          <p style={styles.tokenLabel}>Access Token:</p>
-          <p style={styles.token}>
-            {localStorage.getItem('accessToken')?.substring(0, 50)}...
-          </p>
-          <p style={styles.tokenLabel}>Refresh Token:</p>
-          <p style={styles.token}>{localStorage.getItem('refreshToken')}</p>
-        </div>
+        {isUnsafe ? (
+          <div style={styles.card}>
+            <h2 style={styles.cardTitle}>Unsafe localStorage tokeni</h2>
+            <p style={styles.note}>
+              Access i refresh token su dostupni JavaScript-u kroz namespacovane localStorage kljuceve.
+            </p>
+            <p style={styles.tokenLabel}>unsafe.accessToken:</p>
+            <p style={styles.token}>{getDisplayToken(getUnsafeAccessToken())}</p>
+            <p style={styles.tokenLabel}>unsafe.refreshToken:</p>
+            <p style={styles.token}>{getDisplayToken(getUnsafeRefreshToken())}</p>
+          </div>
+        ) : (
+          <div style={styles.card}>
+            <h2 style={styles.cardTitle}>Protected storage model</h2>
+            <p style={styles.note}>
+              Access token je samo u memoriji aplikacije. Refresh token nije dostupan JavaScript-u jer je u HttpOnly cookie-ju.
+            </p>
+            <p style={styles.tokenLabel}>In-memory access token:</p>
+            <p style={styles.token}>{getDisplayToken(getAccessToken())}</p>
+            <p style={styles.tokenLabel}>Refresh token:</p>
+            <p style={styles.token}>HttpOnly cookie - nije dostupan kroz JavaScript</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -132,6 +162,13 @@ const styles = {
   navUser: {
     color: '#a8dadc',
     fontSize: '14px',
+  },
+  modeBadge: {
+    color: 'white',
+    fontSize: '12px',
+    fontWeight: '700',
+    padding: '6px 10px',
+    borderRadius: '6px',
   },
   logoutBtn: {
     backgroundColor: '#e63946',
@@ -190,6 +227,11 @@ const styles = {
     wordBreak: 'break-all',
     color: '#4361ee',
     marginBottom: '12px',
+  },
+  note: {
+    color: '#555',
+    fontSize: '14px',
+    lineHeight: '1.5',
   },
   error: {
     backgroundColor: '#ffe0e0',

@@ -1,32 +1,38 @@
 import { useState } from 'react';
+import { useAuth } from '../context/useAuth';
 
 function XssDemo() {
+  const { authMode } = useAuth();
   const [input, setInput] = useState('');
-  const [stolenToken, setStolenToken] = useState('');
 
-  // Simulacija XSS napada — napadač ubacuje skriptu
+  const isUnsafe = authMode === 'unsafe';
+
   const simulateXss = () => {
-    // Ovo je ono što napadač ubaci u input
     const xssPayload = `<img src=x onerror="
-      var token = localStorage.getItem('accessToken');
-      var refresh = localStorage.getItem('refreshToken');
-      document.getElementById('stolen').innerHTML = 
-        '<strong>UKRADENO!</strong><br>Access: ' + token + '<br>Refresh: ' + refresh;
+      var access = localStorage.getItem('unsafe.accessToken');
+      var refresh = localStorage.getItem('unsafe.refreshToken');
+      document.getElementById('stolen').innerHTML =
+        '<strong>XSS rezultat</strong><br>' +
+        'unsafe.accessToken: ' + (access || 'nije pronadjen') + '<br>' +
+        'unsafe.refreshToken: ' + (refresh || 'nije pronadjen');
     ">`;
     setInput(xssPayload);
   };
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>🚨 XSS Demo — Ranjiva stranica</h2>
+      <h2 style={styles.title}>XSS Demo - namerno ranjiva stranica</h2>
 
       <div style={styles.warning}>
-        ⚠️ Ova stranica namerno prikazuje XSS ranjivost za demonstraciju!
+        Ova stranica namerno koristi ranjiv HTML prikaz za demonstraciju. Aktivni rezim: {isUnsafe ? 'UNSAFE' : 'PROTECTED'}.
       </div>
 
       <div style={styles.card}>
-        <h3>Scenario: Komentar sistem bez sanitizacije</h3>
-        <p>Korisnik unosi komentar koji se direktno renderuje kao HTML:</p>
+        <h3>Scenario: komentar bez sanitizacije</h3>
+        <p>
+          Unsafe rezim cuva tokene u localStorage-u, pa ih XSS moze procitati. Protected rezim ne cuva refresh token u
+          localStorage-u, vec u HttpOnly cookie-ju.
+        </p>
 
         <textarea
           style={styles.textarea}
@@ -38,32 +44,39 @@ function XssDemo() {
 
         <div style={styles.btnRow}>
           <button style={styles.btnDanger} onClick={simulateXss}>
-            💉 Ubaci XSS Payload
+            Ubaci XSS payload
           </button>
           <button style={styles.btnNormal} onClick={() => setInput('')}>
-            Očisti
+            Ocisti
           </button>
         </div>
 
         <div style={styles.section}>
-          <h4>Renderovan sadržaj (RANJIVO — dangerouslySetInnerHTML):</h4>
-          <div
-            style={styles.output}
-            dangerouslySetInnerHTML={{ __html: input }}
-          />
+          <h4>Renderovan sadrzaj (RANJIVO - dangerouslySetInnerHTML):</h4>
+          <div style={styles.output} dangerouslySetInnerHTML={{ __html: input }} />
         </div>
 
         <div id="stolen" style={styles.stolen}></div>
       </div>
 
       <div style={styles.card}>
-        <h3>✅ Bezbedna verzija (sa sanitizacijom):</h3>
-        <div style={styles.safe}>
-          {input}
-        </div>
-        <p style={styles.note}>
-          Ovde se input prikazuje kao čist tekst — React automatski escapuje HTML.
-        </p>
+        <h3>Ocekivano ponasanje po rezimu</h3>
+        {isUnsafe ? (
+          <p style={styles.note}>
+            UNSAFE: payload moze da procita <code>unsafe.accessToken</code> i <code>unsafe.refreshToken</code>.
+          </p>
+        ) : (
+          <p style={styles.note}>
+            PROTECTED: refresh token nije u localStorage-u i nije dostupan JavaScript-u. Access token je u memoriji
+            aplikacije i nije izlozen kroz <code>window</code>.
+          </p>
+        )}
+      </div>
+
+      <div style={styles.card}>
+        <h3>Bezbedan prikaz istog inputa</h3>
+        <div style={styles.safe}>{input}</div>
+        <p style={styles.note}>Ovde React prikazuje input kao tekst i escapuje HTML.</p>
       </div>
     </div>
   );
@@ -138,7 +151,7 @@ const styles = {
     backgroundColor: '#f0fff4',
     wordBreak: 'break-all',
   },
-  note: { color: '#666', fontSize: '14px', marginTop: '8px' },
+  note: { color: '#666', fontSize: '14px', marginTop: '8px', lineHeight: '1.5' },
 };
 
 export default XssDemo;

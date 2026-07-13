@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import api from '../api/axiosConfig';
+import { useAuth } from '../context/useAuth';
 
 function CsrfDemo() {
+  const { authMode } = useAuth();
   const [result, setResult] = useState('');
   const [resultColor, setResultColor] = useState('#1a1a2e');
 
@@ -56,6 +58,15 @@ function CsrfDemo() {
 
       <div style={styles.warning}>
         ⚠️ Demonstracija CSRF napada — napadač navodi korisnika da pošalje neželjeni zahtev
+      </div>
+
+      <div style={styles.card}>
+        <h3>Status scenarija</h3>
+        <p>
+          Aktivni rezim: <strong>{authMode === 'unsafe' ? 'UNSAFE' : 'PROTECTED'}</strong>.
+          CSRF je najrelevantniji za cookie model u protected rezimu. Ova stranica je trenutno
+          pripremljena za demonstraciju; pravi unsafe/protected CSRF tok bice dovrsen u sledecoj fazi.
+        </p>
       </div>
 
       <div style={styles.card}>
