@@ -79,12 +79,12 @@ function TokenRow({ label, token }) {
 }
 
 const styles = {
-  page: { maxWidth: 850, margin: '32px auto', padding: '0 16px', color: '#1a1a2e' },
-  card: { background: 'white', padding: 22, marginBottom: 18, borderRadius: 8, boxShadow: '0 2px 10px #0002' },
-  warning: { background: '#fff3cd', border: '1px solid #ffc107', padding: 12, borderRadius: 6 },
-  button: { background: '#4361ee', color: 'white', border: 0, padding: '10px 15px', borderRadius: 6, cursor: 'pointer', marginBottom: 8 },
-  token: { background: '#f4f4f4', padding: 12, wordBreak: 'break-all' },
-  message: { background: '#e8f5e9', padding: 14, borderRadius: 6 },
+  page: { maxWidth: 960, margin: '0 auto', padding: '42px 20px 64px', color: 'var(--color-text)' },
+  card: { background: 'var(--color-surface)', padding: 24, marginBottom: 20, borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-card)', border: '1px solid var(--color-border)' },
+  warning: { background: '#f4dfda', color: '#754b3e', border: '1px solid var(--color-soft-danger)', padding: 14, borderRadius: 'var(--radius-sm)' },
+  button: { background: 'var(--color-primary)', color: 'white', border: 0, padding: '11px 16px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', marginBottom: 8, fontWeight: 650 },
+  token: { background: 'var(--color-surface-muted)', padding: 14, borderRadius: 'var(--radius-sm)', wordBreak: 'break-all', overflowWrap: 'anywhere' },
+  message: { background: 'var(--color-success-bg)', padding: 14, borderRadius: 'var(--radius-sm)', color: 'var(--color-primary)' },
 };
 
 export default ReplayDemo;

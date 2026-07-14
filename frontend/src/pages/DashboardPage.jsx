@@ -40,14 +40,14 @@ function DashboardPage() {
   const isUnsafe = authMode === 'unsafe';
 
   return (
-    <div style={styles.container}>
-      <div style={styles.navbar}>
+    <div className="dashboard-page" style={styles.container}>
+      <div className="dashboard-navbar" style={styles.navbar}>
         <h1 style={styles.navTitle}>JWT Auth Demo</h1>
-        <div style={styles.navRight}>
+        <div className="dashboard-nav-actions" style={styles.navRight}>
           <span
             style={{
               ...styles.modeBadge,
-              backgroundColor: isUnsafe ? '#e63946' : '#2d6a4f',
+              backgroundColor: isUnsafe ? 'var(--color-danger)' : 'var(--color-primary)',
             }}
           >
             {isUnsafe ? 'UNSAFE MODE' : 'PROTECTED MODE'}
@@ -59,38 +59,38 @@ function DashboardPage() {
         </div>
       </div>
 
-      <div style={styles.card}>
+      <div className="dashboard-lab-nav" style={styles.card}>
         <h2 style={styles.cardTitle}>Demonstracije napada</h2>
         <button
-          style={{ ...styles.logoutBtn, backgroundColor: '#e63946', marginRight: '12px' }}
+          style={{ ...styles.logoutBtn, backgroundColor: 'var(--color-danger)', marginRight: '12px' }}
           onClick={() => navigate('/xss-demo')}
         >
           XSS Demo
         </button>
 
         <button
-          style={{ ...styles.logoutBtn, backgroundColor: '#f4a261', marginRight: '12px' }}
+          style={{ ...styles.logoutBtn, backgroundColor: 'var(--color-info)', marginRight: '12px' }}
           onClick={() => navigate('/csrf-demo')}
         >
           CSRF Demo
         </button>
 
         <button
-          style={{ ...styles.logoutBtn, backgroundColor: '#4361ee', marginRight: '12px' }}
+          style={{ ...styles.logoutBtn, backgroundColor: 'var(--color-primary)', marginRight: '12px' }}
           onClick={() => navigate('/rotation-demo')}
         >
           Rotation Demo
         </button>
 
         <button
-          style={{ ...styles.logoutBtn, backgroundColor: '#6f42c1' }}
+          style={{ ...styles.logoutBtn, backgroundColor: 'var(--color-secondary)', color: 'var(--color-primary)' }}
           onClick={() => navigate('/replay-demo')}
         >
           Replay laboratorija
         </button>
       </div>
 
-      <div style={styles.content}>
+      <div className="dashboard-content" style={styles.content}>
         {error && <div style={styles.error}>{error}</div>}
 
         <div style={styles.card}>
@@ -147,10 +147,10 @@ function DashboardPage() {
 const styles = {
   container: {
     minHeight: '100vh',
-    backgroundColor: '#f0f2f5',
+    backgroundColor: 'var(--color-bg)',
   },
   navbar: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: 'var(--color-primary)',
     padding: '16px 32px',
     display: 'flex',
     justifyContent: 'space-between',
@@ -167,7 +167,7 @@ const styles = {
     gap: '16px',
   },
   navUser: {
-    color: '#a8dadc',
+    color: '#f7f1e6',
     fontSize: '14px',
   },
   modeBadge: {
@@ -178,7 +178,7 @@ const styles = {
     borderRadius: '6px',
   },
   logoutBtn: {
-    backgroundColor: '#e63946',
+    backgroundColor: 'var(--color-danger)',
     color: 'white',
     border: 'none',
     padding: '8px 16px',
@@ -187,26 +187,27 @@ const styles = {
     fontSize: '14px',
   },
   content: {
-    maxWidth: '800px',
+    maxWidth: '960px',
     margin: '32px auto',
     padding: '0 16px',
   },
   card: {
-    backgroundColor: 'white',
+    backgroundColor: 'var(--color-surface)',
     padding: '24px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+    borderRadius: 'var(--radius-md)',
+    boxShadow: 'var(--shadow-card)',
+    border: '1px solid var(--color-border)',
     marginBottom: '24px',
   },
   cardTitle: {
     marginTop: 0,
-    color: '#1a1a2e',
-    borderBottom: '2px solid #f0f2f5',
+    color: 'var(--color-primary)',
+    borderBottom: '1px solid var(--color-border)',
     paddingBottom: '12px',
   },
   message: {
     fontSize: '18px',
-    color: '#2d6a4f',
+    color: 'var(--color-primary)',
     fontWeight: '600',
   },
   profileItem: {
@@ -217,32 +218,32 @@ const styles = {
   },
   profileLabel: {
     fontWeight: '600',
-    color: '#555',
+    color: 'var(--color-muted)',
     width: '120px',
   },
   tokenLabel: {
     fontWeight: '600',
-    color: '#555',
+    color: 'var(--color-muted)',
     marginBottom: '4px',
   },
   token: {
     fontFamily: 'monospace',
     fontSize: '12px',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: 'var(--color-surface-muted)',
     padding: '8px',
     borderRadius: '4px',
     wordBreak: 'break-all',
-    color: '#4361ee',
+    color: 'var(--color-primary)',
     marginBottom: '12px',
   },
   note: {
-    color: '#555',
+    color: 'var(--color-muted)',
     fontSize: '14px',
     lineHeight: '1.5',
   },
   error: {
-    backgroundColor: '#ffe0e0',
-    color: '#c0392b',
+    backgroundColor: 'var(--color-soft-danger)',
+    color: '#754235',
     padding: '12px',
     borderRadius: '6px',
     marginBottom: '16px',

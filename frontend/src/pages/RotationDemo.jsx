@@ -143,10 +143,10 @@ function RotationDemo() {
   };
 
   const logColors = {
-    info: '#1a1a2e',
-    success: '#2d6a4f',
-    error: '#e63946',
-    warning: '#f4a261',
+    info: '#d9e0e6',
+    success: '#c9d8c1',
+    error: '#efb5a5',
+    warning: '#e8c5c0',
   };
 
   return (
@@ -219,7 +219,7 @@ function RotationDemo() {
               key={index}
               style={{
                 ...styles.logEntry,
-                color: logColors[entry.type] || '#1a1a2e',
+                color: logColors[entry.type] || '#d9e0e6',
               }}
             >
               <span style={styles.logTime}>[{entry.time}]</span> {entry.message}
@@ -244,7 +244,7 @@ function RotationDemo() {
               <td style={styles.td}>localStorage, dostupan JS-u</td>
               <td style={styles.td}>Ne, isti token se moze koristiti vise puta</td>
             </tr>
-            <tr style={{ backgroundColor: '#f8f9fa' }}>
+            <tr style={{ backgroundColor: 'var(--color-surface-muted)' }}>
               <td style={styles.td}>PROTECTED</td>
               <td style={styles.td}>HttpOnly cookie, nije dostupan JS-u</td>
               <td style={styles.td}>Da, backend izdaje novi cookie na refresh</td>
@@ -257,20 +257,21 @@ function RotationDemo() {
 }
 
 const styles = {
-  container: { maxWidth: '800px', margin: '32px auto', padding: '0 16px' },
-  title: { color: '#4361ee' },
+  container: { maxWidth: '1040px', margin: '0 auto', padding: '42px 20px 64px' },
+  title: { color: 'var(--color-primary)', marginBottom: '18px' },
   warning: {
-    backgroundColor: '#e8f4fd',
-    border: '1px solid #4361ee',
-    padding: '12px',
-    borderRadius: '6px',
+    backgroundColor: '#e5eaee',
+    border: '1px solid var(--color-info)',
+    padding: '14px 16px',
+    borderRadius: 'var(--radius-sm)',
     marginBottom: '24px',
   },
   card: {
-    backgroundColor: 'white',
+    backgroundColor: 'var(--color-surface)',
     padding: '24px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+    borderRadius: 'var(--radius-md)',
+    boxShadow: 'var(--shadow-card)',
+    border: '1px solid var(--color-border)',
     marginBottom: '24px',
   },
   btnRow: {
@@ -279,7 +280,7 @@ const styles = {
     flexWrap: 'wrap',
   },
   btnPrimary: {
-    backgroundColor: '#4361ee',
+    backgroundColor: 'var(--color-primary)',
     color: 'white',
     border: 'none',
     padding: '12px 20px',
@@ -288,7 +289,7 @@ const styles = {
     fontSize: '15px',
   },
   btnSuccess: {
-    backgroundColor: '#2d6a4f',
+    backgroundColor: 'var(--color-primary)',
     color: 'white',
     border: 'none',
     padding: '12px 20px',
@@ -297,7 +298,7 @@ const styles = {
     fontSize: '15px',
   },
   btnWarning: {
-    backgroundColor: '#f4a261',
+    backgroundColor: 'var(--color-danger)',
     color: 'white',
     border: 'none',
     padding: '12px 20px',
@@ -306,7 +307,7 @@ const styles = {
     fontSize: '15px',
   },
   btnGray: {
-    backgroundColor: '#6c757d',
+    backgroundColor: 'var(--color-info)',
     color: 'white',
     border: 'none',
     padding: '12px 20px',
@@ -315,7 +316,7 @@ const styles = {
     fontSize: '15px',
   },
   logContainer: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: 'var(--color-code-bg)',
     padding: '16px',
     borderRadius: '6px',
     minHeight: '200px',
@@ -329,21 +330,23 @@ const styles = {
     lineHeight: '1.5',
   },
   logTime: {
-    color: '#6c757d',
+    color: 'var(--color-info)',
     fontSize: '11px',
   },
   emptyLog: {
-    color: '#6c757d',
+    color: 'var(--color-info)',
     textAlign: 'center',
     marginTop: '60px',
   },
   table: {
     width: '100%',
+    display: 'block',
+    overflowX: 'auto',
     borderCollapse: 'collapse',
     fontSize: '14px',
   },
   tableHeader: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: 'var(--color-primary)',
     color: 'white',
   },
   th: {
@@ -353,7 +356,7 @@ const styles = {
   },
   td: {
     padding: '12px',
-    borderBottom: '1px solid #eee',
+    borderBottom: '1px solid var(--color-border)',
   },
 };
 
