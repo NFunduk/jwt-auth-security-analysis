@@ -11,7 +11,6 @@ import com.diplomski.backend.repository.RefreshTokenRepository;
 import com.diplomski.backend.repository.UserRepository;
 import com.diplomski.backend.security.JwtUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -31,10 +29,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
-
-
-    @Value("${jwt.refresh-token-expiration}")
-    private long refreshTokenExpiration;
+    private final RefreshTokenRotationService rotationService;
 
     public AuthResponse register(RegisterRequest request, String ipAddress){
         if(userRepository.existsByUsername(request.getUsername())){
@@ -104,36 +99,12 @@ public class AuthService {
     }
 
 
-    @Transactional
     public AuthResponse refresh(RefreshTokenRequest request, String ipAddress) {
-
-        String tokenValue = request.getRefreshToken();
-
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(tokenValue).orElseThrow(() -> new RuntimeException("Refresh token nije pronađen"));
-
-        // Detekcija reuse napada
-        if (refreshToken.getStatus() == TokenStatus.ROTATED || refreshToken.getStatus() == TokenStatus.REVOKED) {
-
-            refreshTokenRepository.revokeAllUserTokens(refreshToken.getUser().getId());
-            log(refreshToken.getUser().getId(), "REUSE_DETECTED", ipAddress,
-                    "Pokušaj ponovne upotrebe refresh tokena, sve sesije poništene");
-
-            throw new RuntimeException("Refresh token reuse detektovan!");
-        }
-
-        if (refreshToken.isExpired()) {
-            refreshToken.setStatus(TokenStatus.REVOKED);
-            refreshTokenRepository.save(refreshToken);
-            throw new RuntimeException("Refresh token je istekao");
-        }
-
-        refreshToken.setStatus(TokenStatus.ROTATED);
-        refreshToken.setRevokedAt(LocalDateTime.now());
-        refreshTokenRepository.save(refreshToken);
-
-        log(refreshToken.getUser().getId(), "REFRESH", ipAddress, "Token rotiran");
-
-        return generateAuthResponse(refreshToken.getUser(), ipAddress);
+        RefreshTokenRotationService.RotationResult result = rotationService.rotate(request.getRefreshToken(), ipAddress);
+        User user = result.child().entity().getUser();
+        return AuthResponse.builder().accessToken(jwtUtils.generateAccessToken(user.getUsername()))
+                .refreshToken(result.child().rawToken()).username(user.getUsername()).email(user.getEmail())
+                .role(user.getRole().name()).tokenType("Bearer").build();
     }
 
     @Transactional
@@ -168,7 +139,6 @@ public class AuthService {
                 .build();
     }
 
-    @Transactional
     public AuthResponse protectedRefresh(String refreshTokenValue, String ipAddress) {
         if (refreshTokenValue == null || refreshTokenValue.isBlank()) {
             throw new RuntimeException("Refresh cookie nedostaje");
@@ -231,17 +201,7 @@ public class AuthService {
     }
 
     private String createRefreshToken(User user) {
-        String tokenValue = UUID.randomUUID().toString();
-
-        RefreshToken refreshToken = RefreshToken.builder()
-                .token(tokenValue)
-                .user(user)
-                .status(TokenStatus.ACTIVE)
-                .expiresAt(LocalDateTime.now().plusSeconds(refreshTokenExpiration / 1000))
-                .build();
-
-        refreshTokenRepository.save(refreshToken);
-        return tokenValue;
+        return rotationService.issueInitial(user).rawToken();
     }
 
 

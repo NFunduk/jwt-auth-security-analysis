@@ -31,6 +31,9 @@ public class RefreshToken {
     @Column(name = "parent_token_id")
     private Long parentTokenId;  // za reuse detection
 
+    @Column(name = "family_id", length = 36)
+    private String familyId;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -39,6 +42,9 @@ public class RefreshToken {
 
     @Column(name = "revoked_at")
     private LocalDateTime revokedAt;
+
+    @Column(name = "reuse_detected_at")
+    private LocalDateTime reuseDetectedAt;
 
     public enum TokenStatus {
         ACTIVE, REVOKED, ROTATED, REUSED

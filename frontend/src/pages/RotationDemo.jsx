@@ -12,6 +12,10 @@ function RotationDemo() {
   const { authMode } = useAuth();
   const [log, setLog] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [lab, setLab] = useState(null);
+  const [tokenA, setTokenA] = useState('');
+  const [tokenB, setTokenB] = useState('');
+  const [labMessage, setLabMessage] = useState('');
 
   const isUnsafe = authMode === 'unsafe';
 
@@ -20,6 +24,44 @@ function RotationDemo() {
   };
 
   const clearLog = () => setLog([]);
+
+  const startFamilyLab = async () => {
+    setLoading(true);
+    try {
+      const response = await api.post('/api/rotation-lab/start');
+      setLab(response.data); setTokenA(response.data.issuedToken); setTokenB('');
+      setLabMessage('Token A je izdat kao ACTIVE i predstavlja koren nove izolovane family.');
+    } catch (err) { setLabMessage(err.response?.data?.message || err.message); }
+    finally { setLoading(false); }
+  };
+
+  const rotateTokenA = async () => {
+    setLoading(true);
+    try {
+      const response = await api.post('/api/rotation-lab/rotate', { refreshToken: tokenA });
+      setLab(response.data); setTokenB(response.data.issuedToken);
+      setLabMessage('A je ROTATED; B je ACTIVE i parentTokenId pokazuje na A.');
+    } catch (err) { setLab(err.response?.data || lab); setLabMessage(err.response?.data?.message || err.message); }
+    finally { setLoading(false); }
+  };
+
+  const reuseTokenA = async () => {
+    setLoading(true);
+    try { await api.post('/api/rotation-lab/rotate', { refreshToken: tokenA }); }
+    catch (err) {
+      setLab(err.response?.data || lab);
+      setLabMessage(`HTTP ${err.response?.status}: reuse A je detektovan; A=REUSED, aktivni B=REVOKED.`);
+    } finally { setLoading(false); }
+  };
+
+  const retryTokenB = async () => {
+    setLoading(true);
+    try { await api.post('/api/rotation-lab/rotate', { refreshToken: tokenB }); }
+    catch (err) {
+      setLab(err.response?.data || lab);
+      setLabMessage(`HTTP ${err.response?.status}: opozvani naslednik B ne može da osveži sesiju.`);
+    } finally { setLoading(false); }
+  };
 
   const unsafeRefresh = async () => {
     const tokenBefore = getUnsafeRefreshToken();
@@ -116,6 +158,35 @@ function RotationDemo() {
         {isUnsafe
           ? 'Unsafe refresh ne rotira refresh token i dozvoljava ponovnu upotrebu.'
           : 'Protected refresh koristi HttpOnly cookie i backend rotaciju.'}
+      </div>
+
+      <div style={styles.card}>
+        <h3>Izolovana token-family reuse laboratorija</h3>
+        <p>
+          Standardni HttpOnly cookie ostaje nedostupan JavaScript-u. Ovaj panel izdaje zasebnu laboratorijsku
+          family i sirove vrednosti A/B drži samo u memoriji stranice radi kontrolisanog eksperimenta.
+        </p>
+        <div style={styles.btnRow}>
+          <button style={styles.btnPrimary} onClick={startFamilyLab} disabled={loading}>1. Izdaj token A</button>
+          <button style={styles.btnSuccess} onClick={rotateTokenA} disabled={loading || !tokenA || tokenB}>2. Rotiraj A → B</button>
+          <button style={styles.btnWarning} onClick={reuseTokenA} disabled={loading || !tokenB}>3. Ponovo upotrebi A</button>
+          <button style={styles.btnGray} onClick={retryTokenB} disabled={loading || !tokenB}>4. Pokušaj opozvani B</button>
+        </div>
+        {lab && <>
+          <p><strong>Family ID:</strong> <code>{lab.familyId}</code></p>
+          <p><strong>Token A:</strong> <code>{getDisplayToken(tokenA)}</code></p>
+          <p><strong>Token B:</strong> <code>{getDisplayToken(tokenB)}</code></p>
+          <table style={styles.table}>
+            <thead><tr style={styles.tableHeader}><th style={styles.th}>Token</th><th style={styles.th}>ID</th><th style={styles.th}>Parent</th><th style={styles.th}>Status</th><th style={styles.th}>Reuse vreme</th></tr></thead>
+            <tbody>{lab.tokens?.map((token) => <tr key={token.id}>
+              <td style={styles.td}>{token.sequence === 1 ? 'A' : `B${token.sequence > 2 ? token.sequence - 1 : ''}`}</td>
+              <td style={styles.td}>{token.id}</td><td style={styles.td}>{token.parentTokenId || '—'}</td>
+              <td style={styles.td}><strong>{token.status}</strong></td><td style={styles.td}>{token.reuseDetectedAt || '—'}</td>
+            </tr>)}</tbody>
+          </table>
+          {lab.auditResult && <p><strong>Audit:</strong> {lab.auditResult}</p>}
+        </>}
+        {labMessage && <p style={styles.warning}>{labMessage}</p>}
       </div>
 
       <div style={styles.card}>

@@ -134,7 +134,9 @@ const styles = {
   modeButton: {
     padding: '10px',
     borderRadius: '6px',
-    border: '1px solid #ddd',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: '#ddd',
     backgroundColor: '#f8f9fa',
     color: '#333',
     cursor: 'pointer',

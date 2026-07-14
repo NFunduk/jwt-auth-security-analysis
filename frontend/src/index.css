@@ -66,6 +66,11 @@ body {
 .csrf-result { margin-top: 14px; padding: 12px; min-height: 42px; background: #fff5f5; border-left: 4px solid #e63946; }
 .csrf-result.success { background: #f0fff4; border-color: #2d6a4f; }
 
+/* Broken demo image remains in the DOM so UNSAFE onerror still fires, but its browser placeholder is hidden. */
+.xss-render-output img {
+  display: none;
+}
+
 #root {
   width: 1126px;
   max-width: 100%;
