@@ -1,6 +1,7 @@
 package com.diplomski.backend.security;
 
 
+import com.diplomski.backend.service.ReplayAuditService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,6 +23,7 @@ public class JwtAuthFilter extends OncePerRequestFilter{
 
     private final JwtUtils jwtUtils;
     private final UserDetailsService userDetailsService;
+    private final ReplayAuditService replayAuditService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException{
@@ -35,6 +37,7 @@ public class JwtAuthFilter extends OncePerRequestFilter{
 
         String token = authHeader.substring(7); // Uklanja prefiks "Bearer "
 
+        boolean replayLabRequest = "true".equalsIgnoreCase(request.getHeader("X-Replay-Lab"));
         if(jwtUtils.validateToken(token)){
             String username = jwtUtils.getUsernameFromToken(token);
 
@@ -45,8 +48,21 @@ public class JwtAuthFilter extends OncePerRequestFilter{
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
             SecurityContextHolder.getContext().setAuthentication(authToken);
+            if (replayLabRequest) {
+                safeReplayAudit(() -> replayAuditService.succeeded(username, request.getRemoteAddr(), request.getHeader("User-Agent")));
+            }
+        } else if (replayLabRequest) {
+            safeReplayAudit(() -> replayAuditService.expired(request.getRemoteAddr(), request.getHeader("User-Agent")));
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void safeReplayAudit(Runnable auditAction) {
+        try {
+            auditAction.run();
+        } catch (RuntimeException ignored) {
+            // Audit je pomocni laboratorijski signal i nikada ne sme menjati auth ishod.
+        }
     }
 }

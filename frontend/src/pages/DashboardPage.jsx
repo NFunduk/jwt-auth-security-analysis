@@ -76,10 +76,17 @@ function DashboardPage() {
         </button>
 
         <button
-          style={{ ...styles.logoutBtn, backgroundColor: '#4361ee' }}
+          style={{ ...styles.logoutBtn, backgroundColor: '#4361ee', marginRight: '12px' }}
           onClick={() => navigate('/rotation-demo')}
         >
           Rotation Demo
+        </button>
+
+        <button
+          style={{ ...styles.logoutBtn, backgroundColor: '#6f42c1' }}
+          onClick={() => navigate('/replay-demo')}
+        >
+          Replay laboratorija
         </button>
       </div>
 

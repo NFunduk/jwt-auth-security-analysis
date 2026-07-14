@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="sr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bearer replay attacker</title>
+<style>body{font-family:Arial;max-width:660px;margin:32px auto;padding:22px;background:#fff5f5}textarea{width:100%;box-sizing:border-box;font-family:monospace}button{padding:12px;background:#e63946;color:#fff;border:0;margin:10px 0}pre{white-space:pre-wrap;word-break:break-all;background:#222;color:#fff;padding:14px}.note{background:#fff3cd;padding:12px}</style></head>
+<body>
+  <h1>Odvojeni attacker klijent</h1>
+  <p class="note">Origin: <strong>localhost:5174</strong>. Ovaj klijent ne može da čita localStorage žrtve. Ručno nalepi ukradeni JWT.</p>
+  <label for="token">Ukradeni access token:</label>
+  <textarea id="token" rows="8" placeholder="Nalepi ceo JWT"></textarea>
+  <button id="replay">Pošalji Bearer replay</button>
+  <p>Isti zahtev ponovi posle 30 sekundi: očekivan rezultat je HTTP 401.</p>
+  <pre id="result">Zahtev još nije poslat.</pre>
+  <script>
+    document.getElementById('replay').onclick = async () => {
+      const token = document.getElementById('token').value.trim();
+      if (!token) return document.getElementById('result').textContent = 'Token nedostaje.';
+      try {
+        const response = await fetch('http://localhost:8080/api/protected/hello', {
+          headers: { Authorization: `Bearer ${token}`, 'X-Replay-Lab': 'true' }
+        });
+        const text = await response.text();
+        document.getElementById('result').textContent = `HTTP ${response.status}\n${text || response.statusText}`;
+      } catch (error) {
+        document.getElementById('result').textContent = `Mrežna greška\n${error.message}`;
+      }
+    };
+  </script>
+</body></html>

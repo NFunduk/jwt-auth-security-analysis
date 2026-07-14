@@ -23,10 +23,14 @@ public class JwtUtils {
     }
 
     public String generateAccessToken(String username){
+        return generateAccessToken(username, accessTokenExpiration);
+    }
+
+    public String generateAccessToken(String username, long expirationMs){
         return Jwts.builder()
                 .subject(username)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
+                .expiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(getSigningKey())
                 .compact();
     }
