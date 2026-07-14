@@ -54,6 +54,18 @@ body {
   margin: 0;
 }
 
+.csrf-page { max-width: 1050px; margin: 32px auto; padding: 0 16px; color: #1a1a2e; }
+.csrf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+.csrf-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px #00000018; margin-bottom: 18px; }
+.csrf-card h2 { margin-top: 0; font-size: 19px; }
+.csrf-form { display: flex; flex-wrap: wrap; gap: 10px; }
+.csrf-form input { padding: 10px; min-width: 190px; }
+.csrf-card button { padding: 10px 15px; border: 0; border-radius: 6px; background: #4361ee; color: white; cursor: pointer; }
+.csrf-card button:disabled { opacity: .45; cursor: not-allowed; }
+.warning { padding: 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; }
+.csrf-result { margin-top: 14px; padding: 12px; min-height: 42px; background: #fff5f5; border-left: 4px solid #e63946; }
+.csrf-result.success { background: #f0fff4; border-color: #2d6a4f; }
+
 #root {
   width: 1126px;
   max-width: 100%;

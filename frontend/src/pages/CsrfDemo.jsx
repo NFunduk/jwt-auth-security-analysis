@@ -1,231 +1,122 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../api/axiosConfig';
-import { useAuth } from '../context/useAuth';
+
+const emptyResult = { status: 'nije pokrenuto', message: '' };
 
 function CsrfDemo() {
-  const { authMode } = useAuth();
-  const [result, setResult] = useState('');
-  const [resultColor, setResultColor] = useState('#1a1a2e');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [csrfToken, setCsrfToken] = useState('');
+  const [ready, setReady] = useState(false);
+  const [results, setResults] = useState({
+    unsafeLegitimate: emptyResult,
+    unsafeAttack: emptyResult,
+    protectedLegitimate: emptyResult,
+    protectedAttack: emptyResult,
+  });
 
-  const simulateCsrfAttack = async () => {
-    setResult('Napadač šalje zahtev...');
+  const saveResult = (key, status, message) =>
+    setResults((current) => ({ ...current, [key]: { status, message } }));
 
+  useEffect(() => {
+    const receiveAttackerResult = (event) => {
+      if (event.origin !== 'http://localhost:5174' || event.data?.type !== 'csrf-demo-result') return;
+      const key = event.data.target === 'unsafe' ? 'unsafeAttack' : 'protectedAttack';
+      saveResult(key, `HTTP ${event.data.status}`, event.data.message);
+    };
+    window.addEventListener('message', receiveAttackerResult);
+    return () => window.removeEventListener('message', receiveAttackerResult);
+  }, []);
+
+  const createSessions = async (event) => {
+    event.preventDefault();
+    setReady(false);
     try {
-      // Napadač šalje zahtev sa tuđe stranice
-      // Browser bi automatski poslao cookie ako postoji
-      const response = await api.post('/api/auth/transfer-cookie');
-      setResult('🚨 CSRF NAPAD USPEO: ' + response.data.message);
-      setResultColor('#e63946');
-    } catch (err) {
-      setResult('❌ Napad neuspešan: ' + (err.response?.data?.error || err.message));
-      setResultColor('#2d6a4f');
+      await api.post('/api/csrf-demo/unsafe/login', { username, password }, { withCredentials: true });
+      const protectedResponse = await api.post(
+        '/api/csrf-demo/protected/login', { username, password }, { withCredentials: true }
+      );
+      setCsrfToken(protectedResponse.data.csrfToken);
+      setReady(true);
+    } catch (error) {
+      saveResult('unsafeLegitimate', `HTTP ${error.response?.status || 'greška'}`,
+        error.response?.data?.message || error.message);
     }
   };
 
-  const simulateCsrfProtected = async () => {
-    setResult('Pokušaj napada na zaštićen endpoint...');
+  const legitimateUnsafe = async () => runRequest('unsafeLegitimate', () =>
+    api.post('/api/csrf-demo/unsafe/transfer', {}, { withCredentials: true }));
 
+  const legitimateProtected = async () => runRequest('protectedLegitimate', () =>
+    api.post('/api/csrf-demo/protected/transfer', {}, {
+      withCredentials: true,
+      headers: { 'X-CSRF-Token': csrfToken },
+    }));
+
+  const runRequest = async (key, request) => {
     try {
-      // Napadač nema CSRF token — ne može da ga pošalje
-      const response = await api.post('/api/auth/transfer-protected');
-      setResult('🚨 Napad uspeo: ' + response.data.message);
-      setResultColor('#e63946');
-    } catch (err) {
-      setResult('✅ Napad blokiran: ' + (err.response?.data?.error || err.message));
-      setResultColor('#2d6a4f');
+      const response = await request();
+      saveResult(key, `HTTP ${response.status}`, response.data.message);
+    } catch (error) {
+      saveResult(key, `HTTP ${error.response?.status || 'greška'}`,
+        error.response?.data?.message || error.message);
     }
   };
 
-  const simulateLegitimateRequest = async () => {
-    setResult('Legitimni korisnik šalje zahtev...');
-
-    try {
-      // Legitimni korisnik ima CSRF token
-      const response = await api.post('/api/auth/transfer-protected', {}, {
-        headers: { 'X-CSRF-Token': 'diplomski-csrf-token' }
-      });
-      setResult('✅ LEGITIMNI ZAHTEV PROŠAO: ' + response.data.message);
-      setResultColor('#2d6a4f');
-    } catch (err) {
-      setResult('Greška: ' + err.message);
-      setResultColor('#e63946');
-    }
+  const launchAttack = (target) => {
+    const key = target === 'unsafe' ? 'unsafeAttack' : 'protectedAttack';
+    saveResult(key, 'čeka rezultat', 'Otvoren je attacker origin; zahtev ne sadrži token ni Authorization zaglavlje.');
+    window.open(`http://localhost:5174/?target=${target}`, `csrf-${target}`, 'width=620,height=520');
   };
 
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>🎭 CSRF Demo</h2>
+    <main className="csrf-page">
+      <h1>CSRF laboratorija</h1>
+      <p className="warning">Izolovana demonstracija. Cookie sesije važe 30 minuta i nisu deo standardnog JWT toka.</p>
 
-      <div style={styles.warning}>
-        ⚠️ Demonstracija CSRF napada — napadač navodi korisnika da pošalje neželjeni zahtev
-      </div>
+      <section className="csrf-card">
+        <h2>1. Uspostavi demo sesije</h2>
+        <form onSubmit={createSessions} className="csrf-form">
+          <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" required />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Lozinka" required />
+          <button>Prijavi se u oba CSRF režima</button>
+        </form>
+        <p>{ready ? '✓ Unsafe i protected HttpOnly cookie sesije su aktivne.' : 'Unesi postojeći nalog.'}</p>
+      </section>
 
-      <div style={styles.card}>
-        <h3>Status scenarija</h3>
-        <p>
-          Aktivni rezim: <strong>{authMode === 'unsafe' ? 'UNSAFE' : 'PROTECTED'}</strong>.
-          CSRF je najrelevantniji za cookie model u protected rezimu. Ova stranica je trenutno
-          pripremljena za demonstraciju; pravi unsafe/protected CSRF tok bice dovrsen u sledecoj fazi.
-        </p>
-      </div>
+      <section className="csrf-grid">
+        <DemoCard title="Legitimni UNSAFE zahtev" result={results.unsafeLegitimate}
+          explanation="Aplikacija šalje zahtev; server prihvata identitet samo iz cookie-ja i ne proverava CSRF token."
+          action={() => legitimateUnsafe()} disabled={!ready} label="Pošalji legitimni zahtev" />
+        <DemoCard title="CSRF napad na UNSAFE" result={results.unsafeAttack}
+          explanation="Attacker origin šalje zahtev bez pristupa cookie-ju. Browser cookie dodaje automatski, pa ranjivi server izvršava transfer."
+          action={() => launchAttack('unsafe')} disabled={!ready} label="Otvori attacker stranicu" />
+        <DemoCard title="Legitimni PROTECTED zahtev" result={results.protectedLegitimate}
+          explanation="Aplikacija šalje serverom generisan sesijski CSRF token i dolazi sa dozvoljenog Origin-a."
+          action={() => legitimateProtected()} disabled={!ready} label="Pošalji legitimni zahtev" />
+        <DemoCard title="CSRF napad na PROTECTED" result={results.protectedAttack}
+          explanation="Attacker nema CSRF token, a njegov Origin je localhost:5174; server vraća 403 i beleži razlog."
+          action={() => launchAttack('protected')} disabled={!ready} label="Otvori attacker stranicu" />
+      </section>
 
-      <div style={styles.card}>
-        <h3>Šta je CSRF?</h3>
-        <p>
-          Cross-Site Request Forgery — napadač kreira stranicu koja automatski
-          šalje zahtev na tvoju aplikaciju. Ako korisnik ima aktivan cookie,
-          browser ga automatski šalje — bez znanja korisnika.
-        </p>
-      </div>
-
-      <div style={styles.card}>
-        <h3>🔴 Scenario 1 — Endpoint BEZ zaštite</h3>
-        <p>Napadač šalje POST zahtev na <code>/api/auth/transfer-cookie</code></p>
-        <p>Endpoint ne proverava nikakav CSRF token.</p>
-        <button style={styles.btnDanger} onClick={simulateCsrfAttack}>
-          💀 Simuliraj CSRF napad
-        </button>
-      </div>
-
-      <div style={styles.card}>
-        <h3>🟡 Scenario 2 — Endpoint SA zaštitom, napadač bez tokena</h3>
-        <p>Napadač pokušava napad na <code>/api/auth/transfer-protected</code></p>
-        <p>Ne poseduje CSRF token — zahtev treba biti odbijen.</p>
-        <button style={styles.btnWarning} onClick={simulateCsrfProtected}>
-          🔒 Napad na zaštićen endpoint
-        </button>
-      </div>
-
-      <div style={styles.card}>
-        <h3>🟢 Scenario 3 — Legitimni korisnik SA tokenom</h3>
-        <p>Legitimni korisnik šalje zahtev sa ispravnim CSRF tokenom.</p>
-        <button style={styles.btnSuccess} onClick={simulateLegitimateRequest}>
-          ✅ Legitimni zahtev
-        </button>
-      </div>
-
-      {result && (
-        <div style={{...styles.result, borderColor: resultColor, color: resultColor}}>
-          <strong>Rezultat:</strong> {result}
-        </div>
-      )}
-
-      <div style={styles.card}>
-        <h3>📊 Poređenje storage modela</h3>
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.tableHeader}>
-              <th style={styles.th}>Storage</th>
-              <th style={styles.th}>XSS rizik</th>
-              <th style={styles.th}>CSRF rizik</th>
-              <th style={styles.th}>Preporuka</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={styles.td}>localStorage</td>
-              <td style={{...styles.td, color: '#e63946'}}>🔴 Visok</td>
-              <td style={{...styles.td, color: '#2d6a4f'}}>🟢 Nizak</td>
-              <td style={styles.td}>Izbegavati za osetljive tokene</td>
-            </tr>
-            <tr style={{backgroundColor: '#f8f9fa'}}>
-              <td style={styles.td}>sessionStorage</td>
-              <td style={{...styles.td, color: '#e63946'}}>🔴 Visok</td>
-              <td style={{...styles.td, color: '#2d6a4f'}}>🟢 Nizak</td>
-              <td style={styles.td}>Bolje od localStorage, ali i dalje rizično</td>
-            </tr>
-            <tr>
-              <td style={styles.td}>HttpOnly Cookie</td>
-              <td style={{...styles.td, color: '#2d6a4f'}}>🟢 Nizak</td>
-              <td style={{...styles.td, color: '#e63946'}}>🔴 Visok bez zaštite</td>
-              <td style={styles.td}>Koristiti sa SameSite + CSRF tokenom</td>
-            </tr>
-            <tr style={{backgroundColor: '#f8f9fa'}}>
-              <td style={styles.td}>HttpOnly + SameSite</td>
-              <td style={{...styles.td, color: '#2d6a4f'}}>🟢 Nizak</td>
-              <td style={{...styles.td, color: '#f4a261'}}>🟡 Srednji</td>
-              <td style={{...styles.td, color: '#2d6a4f', fontWeight: '600'}}>✅ Preporučeno</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+      <section className="csrf-card">
+        <h2>Zašto CORS nije odbrana</h2>
+        <p>Attacker origin je namerno dozvoljen u laboratorijskom CORS-u samo radi prikaza odgovora. Unsafe zahtev ipak prolazi, dok protected zahtev blokiraju CSRF token i Origin provera.</p>
+        <p>Portovi 5173 i 5174 su različiti origin-i, ali isti browser site na localhost-u. Produkcijska demonstracija preko različitih domena zahteva HTTPS i <code>Secure</code> cookie.</p>
+      </section>
+    </main>
   );
 }
 
-const styles = {
-  container: { maxWidth: '800px', margin: '32px auto', padding: '0 16px' },
-  title: { color: '#e63946' },
-  warning: {
-    backgroundColor: '#fff3cd',
-    border: '1px solid #ffc107',
-    padding: '12px',
-    borderRadius: '6px',
-    marginBottom: '24px',
-  },
-  card: {
-    backgroundColor: 'white',
-    padding: '24px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-    marginBottom: '24px',
-  },
-  btnDanger: {
-    backgroundColor: '#e63946',
-    color: 'white',
-    border: 'none',
-    padding: '12px 20px',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '15px',
-    marginTop: '8px',
-  },
-  btnWarning: {
-    backgroundColor: '#f4a261',
-    color: 'white',
-    border: 'none',
-    padding: '12px 20px',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '15px',
-    marginTop: '8px',
-  },
-  btnSuccess: {
-    backgroundColor: '#2d6a4f',
-    color: 'white',
-    border: 'none',
-    padding: '12px 20px',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '15px',
-    marginTop: '8px',
-  },
-  result: {
-    padding: '16px',
-    borderRadius: '8px',
-    border: '2px solid',
-    marginBottom: '24px',
-    fontSize: '16px',
-    backgroundColor: 'white',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    fontSize: '14px',
-  },
-  tableHeader: {
-    backgroundColor: '#1a1a2e',
-    color: 'white',
-  },
-  th: {
-    padding: '12px',
-    textAlign: 'left',
-    fontWeight: '600',
-  },
-  td: {
-    padding: '12px',
-    borderBottom: '1px solid #eee',
-  },
-};
+function DemoCard({ title, result, explanation, action, disabled, label }) {
+  const ok = result.status === 'HTTP 200';
+  return <section className="csrf-card">
+    <h2>{title}</h2><p>{explanation}</p>
+    <button onClick={action} disabled={disabled}>{label}</button>
+    <div className={ok ? 'csrf-result success' : 'csrf-result'}>
+      <strong>{result.status}</strong><br />{result.message}
+    </div>
+  </section>;
+}
 
 export default CsrfDemo;
