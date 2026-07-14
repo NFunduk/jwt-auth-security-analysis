@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="sr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bearer replay attacker</title>
+<style>:root{font-family:Inter,system-ui,sans-serif;color:#3f463b;background:#f7f1e6}*{box-sizing:border-box}body{max-width:720px;margin:40px auto;padding:30px;background:#fffdf9;border:1px solid #ddd6c8;border-radius:18px;box-shadow:0 10px 28px rgba(78,90,70,.1)}h1{color:#c26d53}p{line-height:1.65}textarea{width:100%;font-family:monospace;padding:12px;border:1px solid #ddd6c8;border-radius:8px;background:#fffefa}button{padding:11px 16px;background:#c26d53;color:#fff;border:0;border-radius:8px;margin:12px 0;font-weight:650;cursor:pointer}pre{white-space:pre-wrap;word-break:break-all;background:#313a32;color:#f7f1e6;padding:16px;border-radius:10px}.note{background:#f4dfda;border:1px solid #e8c5c0;padding:14px;border-radius:8px}@media(max-width:760px){body{margin:16px;padding:22px}}</style></head>
+<body>
+  <h1>Odvojeni attacker klijent</h1>
+  <p class="note">Origin: <strong>localhost:5174</strong>. Ovaj klijent ne može da čita localStorage žrtve. Ručno nalepi ukradeni JWT.</p>
+  <label for="token">Ukradeni access token:</label>
+  <textarea id="token" rows="8" placeholder="Nalepi ceo JWT"></textarea>
+  <button id="replay">Pošalji Bearer replay</button>
+  <p>Isti zahtev ponovi posle 30 sekundi: očekivan rezultat je HTTP 401.</p>
+  <pre id="result">Zahtev još nije poslat.</pre>
+  <script>
+    document.getElementById('replay').onclick = async () => {
+      const token = document.getElementById('token').value.trim();
+      if (!token) return document.getElementById('result').textContent = 'Token nedostaje.';
+      try {
+        const response = await fetch('http://localhost:8080/api/protected/hello', {
+          headers: { Authorization: `Bearer ${token}`, 'X-Replay-Lab': 'true' }
+        });
+        const text = await response.text();
+        document.getElementById('result').textContent = `HTTP ${response.status}\n${text || response.statusText}`;
+      } catch (error) {
+        document.getElementById('result').textContent = `Mrežna greška\n${error.message}`;
+      }
+    };
+  </script>
+</body></html>

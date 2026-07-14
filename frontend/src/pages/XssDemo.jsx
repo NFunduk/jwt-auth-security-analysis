@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import DOMPurify from 'dompurify';
 import { useAuth } from '../context/useAuth';
 
 function XssDemo() {
@@ -6,6 +7,9 @@ function XssDemo() {
   const [input, setInput] = useState('');
 
   const isUnsafe = authMode === 'unsafe';
+  const sanitizedInput = useMemo(() => DOMPurify.sanitize(input, {
+    USE_PROFILES: { html: true },
+  }), [input]);
 
   const simulateXss = () => {
     const xssPayload = `<img src=x onerror="
@@ -52,8 +56,23 @@ function XssDemo() {
         </div>
 
         <div style={styles.section}>
-          <h4>Renderovan sadrzaj (RANJIVO - dangerouslySetInnerHTML):</h4>
-          <div style={styles.output} dangerouslySetInnerHTML={{ __html: input }} />
+          {isUnsafe ? (
+            <>
+              <h4>UNSAFE prikaz (RANJIVO - direktan dangerouslySetInnerHTML):</h4>
+              <div className="xss-render-output" style={styles.output} dangerouslySetInnerHTML={{ __html: input }} />
+            </>
+          ) : (
+            <>
+              <h4>PROTECTED prikaz (DOMPurify sanitizacija pre renderovanja):</h4>
+              <div className="xss-render-output" style={styles.protectedOutput} dangerouslySetInnerHTML={{ __html: sanitizedInput }} />
+              <p style={styles.note}>
+                DOMPurify uklanja izvršive atribute kao što je <code>onerror</code>. Isti HTML može biti prikazan,
+                ali payload više ne može da pokrene JavaScript niti da pročita tokene.
+              </p>
+              <p style={styles.tokenLabel}>Sanitizovani HTML:</p>
+              <pre style={styles.sanitizedSource}>{sanitizedInput || 'Nema sadržaja'}</pre>
+            </>
+          )}
         </div>
 
         <div id="stolen" style={styles.stolen}></div>
@@ -78,39 +97,50 @@ function XssDemo() {
         <div style={styles.safe}>{input}</div>
         <p style={styles.note}>Ovde React prikazuje input kao tekst i escapuje HTML.</p>
       </div>
+
+      <div style={styles.card}>
+        <h3>Defense in depth: CSP</h3>
+        <p style={styles.note}>
+          Content Security Policy može dodatno ograničiti izvore skripti i zabraniti inline JavaScript. CSP nije
+          globalno aktiviran u ovoj laboratoriji jer bi blokirao i namerno ranjivi UNSAFE eksperiment. U produkcijskom
+          protected deployment-u CSP treba koristiti zajedno sa sanitizacijom, a ne kao njenu zamenu.
+        </p>
+      </div>
     </div>
   );
 }
 
 const styles = {
-  container: { maxWidth: '800px', margin: '32px auto', padding: '0 16px' },
-  title: { color: '#e63946' },
+  container: { maxWidth: '960px', margin: '0 auto', padding: '42px 20px 64px' },
+  title: { color: 'var(--color-danger)', marginBottom: '18px' },
   warning: {
-    backgroundColor: '#fff3cd',
-    border: '1px solid #ffc107',
-    padding: '12px',
-    borderRadius: '6px',
+    backgroundColor: '#f4dfda',
+    border: '1px solid var(--color-soft-danger)',
+    color: '#754b3e',
+    padding: '14px 16px',
+    borderRadius: 'var(--radius-sm)',
     marginBottom: '24px',
   },
   card: {
-    backgroundColor: 'white',
+    backgroundColor: 'var(--color-surface)',
     padding: '24px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+    borderRadius: 'var(--radius-md)',
+    boxShadow: 'var(--shadow-card)',
+    border: '1px solid var(--color-border)',
     marginBottom: '24px',
   },
   textarea: {
     width: '100%',
     padding: '10px',
     borderRadius: '6px',
-    border: '1px solid #ddd',
+    border: '1px solid var(--color-border)',
     fontSize: '14px',
     fontFamily: 'monospace',
     boxSizing: 'border-box',
   },
   btnRow: { display: 'flex', gap: '12px', margin: '12px 0' },
   btnDanger: {
-    backgroundColor: '#e63946',
+    backgroundColor: 'var(--color-danger)',
     color: 'white',
     border: 'none',
     padding: '10px 16px',
@@ -118,7 +148,7 @@ const styles = {
     cursor: 'pointer',
   },
   btnNormal: {
-    backgroundColor: '#6c757d',
+    backgroundColor: 'var(--color-info)',
     color: 'white',
     border: 'none',
     padding: '10px 16px',
@@ -127,17 +157,28 @@ const styles = {
   },
   section: { marginTop: '16px' },
   output: {
-    border: '2px solid #e63946',
+    borderWidth: '2px',
+    borderStyle: 'solid',
+    borderColor: 'var(--color-danger)',
     padding: '12px',
     borderRadius: '6px',
     minHeight: '40px',
-    backgroundColor: '#fff5f5',
+    backgroundColor: '#f7e8e5',
+  },
+  protectedOutput: {
+    borderWidth: '2px',
+    borderStyle: 'solid',
+    borderColor: 'var(--color-primary)',
+    padding: '12px',
+    borderRadius: '6px',
+    minHeight: '40px',
+    backgroundColor: 'var(--color-success-bg)',
   },
   stolen: {
     marginTop: '16px',
     padding: '12px',
-    backgroundColor: '#1a1a2e',
-    color: '#e63946',
+    backgroundColor: 'var(--color-code-bg)',
+    color: '#f0c2b5',
     borderRadius: '6px',
     fontFamily: 'monospace',
     fontSize: '12px',
@@ -145,13 +186,22 @@ const styles = {
     minHeight: '20px',
   },
   safe: {
-    border: '2px solid #2d6a4f',
+    border: '2px solid var(--color-primary)',
     padding: '12px',
     borderRadius: '6px',
-    backgroundColor: '#f0fff4',
+    backgroundColor: 'var(--color-success-bg)',
     wordBreak: 'break-all',
   },
-  note: { color: '#666', fontSize: '14px', marginTop: '8px', lineHeight: '1.5' },
+  tokenLabel: { fontWeight: '600', color: 'var(--color-muted)', marginBottom: '4px' },
+  sanitizedSource: {
+    backgroundColor: 'var(--color-code-bg)',
+    color: '#dce4d7',
+    padding: '12px',
+    borderRadius: '6px',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-all',
+  },
+  note: { color: 'var(--color-muted)', fontSize: '14px', marginTop: '8px', lineHeight: '1.6' },
 };
 
 export default XssDemo;

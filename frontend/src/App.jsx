@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import XssDemo from './pages/XssDemo';
 import CsrfDemo from './pages/CsrfDemo';
 import RotationDemo from './pages/RotationDemo';
+import ReplayDemo from './pages/ReplayDemo';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -43,6 +44,11 @@ function App() {
             <CsrfDemo />
           </ProtectedRoute>
         }
+      />
+
+      <Route
+        path="/replay-demo"
+        element={<ProtectedRoute><ReplayDemo /></ProtectedRoute>}
       />
 
       <Route
