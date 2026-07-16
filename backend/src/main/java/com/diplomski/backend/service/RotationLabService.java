@@ -6,8 +6,10 @@ import com.diplomski.backend.entity.User;
 import com.diplomski.backend.repository.RefreshTokenRepository;
 import com.diplomski.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @Service
@@ -33,8 +35,22 @@ public class RotationLabService {
         return response(familyId, null, event, auditResult);
     }
 
+    @Transactional(readOnly = true)
+    public RotationLabResponse familyForUser(String familyId, String username) {
+        List<RefreshToken> family = tokens.findByFamilyIdAndUserUsernameOrderByCreatedAtAsc(familyId, username);
+        if (family.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Token family nije pronadjena");
+        }
+        return response(familyId, family, null, "FAMILY_STATUS", null);
+    }
+
     private RotationLabResponse response(String familyId, String issued, String event, String auditResult) {
         List<RefreshToken> family = tokens.findByFamilyIdOrderByCreatedAtAsc(familyId);
+        return response(familyId, family, issued, event, auditResult);
+    }
+
+    private RotationLabResponse response(String familyId, List<RefreshToken> family, String issued,
+                                         String event, String auditResult) {
         List<RotationLabResponse.TokenView> views = java.util.stream.IntStream.range(0, family.size())
                 .mapToObj(i -> view(family.get(i), i + 1)).toList();
         return new RotationLabResponse(familyId, issued, event, views, auditResult);

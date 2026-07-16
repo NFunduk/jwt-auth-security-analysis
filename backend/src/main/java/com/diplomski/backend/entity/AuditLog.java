@@ -31,6 +31,14 @@ public class AuditLog {
 
     private String details;
 
-    @Column(name = "created_at")
+    @Builder.Default
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @PrePersist
+    void ensureCreatedAt() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
 }

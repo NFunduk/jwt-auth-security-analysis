@@ -35,7 +35,8 @@ public class RotationLabController {
     }
 
     @GetMapping("/family/{familyId}")
-    public RotationLabResponse family(@PathVariable String familyId) {
-        return lab.family(familyId, "FAMILY_STATUS", null);
+    public RotationLabResponse family(@PathVariable String familyId,
+                                      @AuthenticationPrincipal UserDetails user) {
+        return lab.familyForUser(familyId, user.getUsername());
     }
 }
