@@ -21,6 +21,22 @@ const api = axios.create({
   },
 });
 
+let protectedRefreshPromise = null;
+
+export const refreshProtectedSession = () => {
+  if (!protectedRefreshPromise) {
+    protectedRefreshPromise = axios.post(
+      `${API_BASE_URL}/api/protected/auth/refresh`,
+      {},
+      { withCredentials: true, skipAuthRefresh: true }
+    ).finally(() => {
+      protectedRefreshPromise = null;
+    });
+  }
+
+  return protectedRefreshPromise;
+};
+
 const isAuthRequest = (url = '') =>
   /\/api\/(unsafe\/auth|protected\/auth|auth)\/(register|login|login-cookie|refresh|logout)$/.test(url);
 
@@ -94,11 +110,7 @@ api.interceptors.response.use(
         return api(originalRequest);
       }
 
-      const response = await axios.post(
-        `${API_BASE_URL}/api/protected/auth/refresh`,
-        {},
-        { withCredentials: true, skipAuthRefresh: true }
-      );
+      const response = await refreshProtectedSession();
 
       const { accessToken } = response.data;
       setAccessToken(accessToken);

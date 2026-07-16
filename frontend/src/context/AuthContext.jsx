@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import api from '../api/axiosConfig';
+import api, { refreshProtectedSession } from '../api/axiosConfig';
 import {
   AUTH_MODES,
   clearAccessToken,
@@ -35,11 +35,7 @@ export const AuthProvider = ({ children }) => {
       clearUnsafeSession();
 
       try {
-        const refreshResponse = await api.post(
-          '/api/protected/auth/refresh',
-          {},
-          { withCredentials: true, skipAuthRefresh: true }
-        );
+        const refreshResponse = await refreshProtectedSession();
         setAccessToken(refreshResponse.data.accessToken);
 
         const profileResponse = await api.get('/api/protected/profile');
