@@ -19,6 +19,7 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     Optional<RefreshToken> findByTokenForUpdate(String token);
     List<RefreshToken> findByUserIdAndStatus(Long userId, TokenStatus status);
     List<RefreshToken> findByFamilyIdOrderByCreatedAtAsc(String familyId);
+    List<RefreshToken> findByFamilyIdAndUserUsernameOrderByCreatedAtAsc(String familyId, String username);
 
     @Modifying
     @Transactional
